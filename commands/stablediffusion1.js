@@ -5,7 +5,9 @@ const dotenv = require('dotenv');
 const createHash = require('hash-generator');
 
 dotenv.config();
-//Generate hash solution from https://github.com/onury5506/Discord-ChatGPT-Bot
+
+//Generate hash solution idea from https://github.com/onury5506/Discord-ChatGPT-Bot
+
 function generateHash() {
   let hash = createHash(12)
   return {

@@ -2,7 +2,7 @@
 
 ## WIP
 
-Utilizes [DiscordJs](https://discord.js.org/#/) and [unofficial chatgpt-api](https://github.com/transitive-bullshit/chatgpt-api) for ChatGPT prompts. Huggingface Stable Diffusion 2, and Stable Diffusion 1 image generation. As well as Dall-E(TBD) image generation integration.
+Utilizes [DiscordJs](https://discord.js.org/#/) and [unofficial chatgpt-api](https://github.com/transitive-bullshit/chatgpt-api) for ChatGPT prompts. Huggingface Stable Diffusion 2, and Stable Diffusion 1 image generation. As well as Dall-E mini(TBD) image generation integration.
 
 Much of the codebase was refactored, linted/cleaned with ChatGPT. As well as solutions were discovered through ChatGPT prompts.
 
