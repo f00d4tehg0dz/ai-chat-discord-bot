@@ -37,11 +37,7 @@ async function startSocket(interaction, prompt) {
 const ws = new WebSocket('wss://stabilityai-stable-diffusion.hf.space/queue/join');
 const hash = generateHash();
 // Sometimes the WS send doesn't get a receive, so we time it out and retry
-let SendReceiveTimer = setTimeout(async () => {
-  await interaction.editReply({
-    content: 'Your request has timed out. Please try again',
-  });
-}, 129000)
+
 ws.on('open', () => {});
 
 ws.on('message', async (message) => {
@@ -88,11 +84,10 @@ ws.on('message', async (message) => {
             content: 'An error occurred while generating the image',
           });
         }
-      } else {
+      } else if (msg.msg === 'queue_full') {
         try {
-          clearTimeout(SendReceiveTimer)
           await interaction.editReply({
-            content: 'The bot is overwhelmed with requests at the moment.  Please try entering your prompt of '+prompt+' again',
+            content: 'The queue is full. Please try entering your prompt of '+prompt+' again',
           });
           // Infinite loop detected
           // startSocket(interaction, prompt)
