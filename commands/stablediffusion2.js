@@ -1,20 +1,8 @@
-const WebSocket = require('ws');
+const request = require('request');
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const sqlite3 = require('sqlite3');
 const dotenv = require('dotenv');
-const createHash = require('hash-generator');
-
 dotenv.config();
-
-//Generate hash solution idea from https://github.com/onury5506/Discord-ChatGPT-Bot
-
-function generateHash() {
-  let hash = createHash(11)
-  return {
-    session_hash: hash,
-    fn_index: 2
-  }
-}
 
 const db = new sqlite3.Database('conversation.db');
 
@@ -27,92 +15,98 @@ db.run(`
   )
 `);
 
-
 async function startSocket(interaction, prompt) {
   let timerCounter = setTimeout(async () => {
     await interaction.editReply({
       content: 'Your request has timed out. Please try again',
     });
   }, 129000)
-const ws = new WebSocket('wss://stabilityai-stable-diffusion.hf.space/queue/join');
-const hash = generateHash();
-// Sometimes the WS send doesn't get a receive, so we time it out and retry
 
-ws.on('open', () => {});
+const options = {
+  method: 'POST',
+  url: process.env.stableDiffusionEnv,
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: {
+      "init_images": [
+        "1"
+      ],
+      "resize_mode": 0,
+      "denoising_strength": 0.75,
+      "mask": "string",
+      "mask_blur": 4,
+      "inpainting_fill": 0,
+      "inpaint_full_res": true,
+      "inpaint_full_res_padding": 0,
+      "inpainting_mask_invert": 0,
+      "initial_noise_multiplier": 0,
+      "prompt": prompt,
+      "styles": [
+        "None"
+      ],
+      "seed": -1,
+      "subseed": -1,
+      "subseed_strength": 0,
+      "seed_resize_from_h": -1,
+      "seed_resize_from_w": -1,
+      "sampler_name": "Euler a",
+      "batch_size": 1,
+      "n_iter": 1,
+      "steps": 50,
+      "cfg_scale": 7,
+      "width": 512,
+      "height": 512,
+      "restore_faces": false,
+      "tiling": false,
+      "negative_prompt": "",
+      "eta": 0,
+      "s_churn": 0,
+      "s_tmax": 0,
+      "s_tmin": 0,
+      "s_noise": 1,
+      "override_settings": {},
+      "sampler_index": "Euler",
+      "include_init_images": false
+  },
+  json: true
+};
 
-ws.on('message', async (message) => {
-  const msg = JSON.parse(`${message}`);
-  if (msg.msg === 'send_hash') {
-    ws.send(JSON.stringify(hash));
-  } else if (msg.msg === 'send_data') {
-    const data = {
-      data: [prompt,"",9],
-      ...hash,
-    };
-    ws.send(JSON.stringify(data));
-  } else if (msg.msg === 'estimation') {
+request(options, async function (error, response, body) {
+  if (error) throw new Error(error);
+
+  clearTimeout(timerCounter)
+
+  try {
+    const results = body.images[0];
+
+      const buffer = Buffer.from(results, 'base64');
+      const attachment = new AttachmentBuilder(buffer, {
+        name: 'diffusion.png',
+      })
+
+    db.run(`
+      INSERT INTO stableDiffusion (user_id, prompt, response)
+      VALUES (?, ?, ?)
+    `, [interaction.user.id, prompt, results]);
+
     await interaction.editReply({
-      content: 'Current Position in Queue ' +msg.rank,
+      content: 'You asked '+ prompt,
+      files: [attachment],
     });
-  } else if (msg.msg === 'process_completed') {
-    clearTimeout(timerCounter)
-    try {
-      const results = msg.output.data[0];
-      const attachments = [];
-
-      for (let i = 0; i < results.length; i++) {
-        const data = results[i].split(',')[1];
-        const buffer = Buffer.from(data, 'base64');
-        const attachment = new AttachmentBuilder(buffer, {
-          name: 'diffusion.png',
+  } catch (error) {
+        console.error(error);
+        await interaction.editReply({
+          content: 'An error occurred while generating the image',
         });
-        attachments.push(attachment);
       }
-
-      db.run(`
-        INSERT INTO stableDiffusion (user_id, prompt, response)
-        VALUES (?, ?, ?)
-      `, [interaction.user.id, prompt, results]);
-
-      await interaction.editReply({
-        content: 'You asked '+ prompt,
-        files: attachments,
       });
-    } catch (error) {
-          console.error(error);
-          await interaction.editReply({
-            content: 'An error occurred while generating the image',
-          });
-        }
-      } else if (msg.msg === 'queue_full') {
-        try {
-          await interaction.editReply({
-            content: 'The queue is full. Please try entering your prompt of '+prompt+' again',
-          });
-          // Infinite loop detected
-          // startSocket(interaction, prompt)
-        }
-        catch (error) {
-          console.error(error);
-          await interaction.editReply({
-            content: 'An error occurred while generating the image',
-          });
-      }
-      }
-    });
-
-    ws.on('error', async (error) => {
-      console.error(error);
-      await interaction.editReply({
-        content: 'An error occurred while generating the image',
-      });
-    });
   }
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('diffusion')
-    .setDescription('Generates an image from a text prompt using Stable Diffusion 2.0')
+    .setDescription('Generates an image from a text prompt using Stable Diffusion 2.1')
     .addStringOption(option => option
       .setName('prompt')
       .setDescription('generate image prompt')
@@ -121,7 +115,7 @@ module.exports = {
     const prompt = interaction.options.getString('prompt');
     console.log('What to generate?', prompt);
     try {
-      await interaction.reply("I'm generating... this can take up to 2 minutes...");
+      await interaction.reply("I'm generating...");
       startSocket(interaction, prompt)
         } catch (error) {
           console.error(error);
