@@ -86,7 +86,7 @@ module.exports = {
               attachments.push(attachment);
             }
 
-            db.query(`INSERT INTO stableDiffusionLegacy (user_id, prompt, response) VALUES (?, ?, ?)`, [interaction.user.id, prompt, resultsToString], function (error, results, fields) {
+            db.query(`INSERT INTO stableDiffusionLegacy (user_id, prompt) VALUES (?, ?)`, [interaction.user.id, prompt], function (error, results, fields) {
               if (error) throw error;
              interaction.editReply({
               content: 'You asked '+ prompt,
