@@ -93,8 +93,7 @@ async function startSocket(interaction, prompt) {
       const attachments = [];
 
       for (let i = 0; i < results.length; i++) {
-        const data = results[i].split(',')[1];
-        console.log([results[i]])
+        const data = results[i];
         const buffer = Buffer.from(data, 'base64');
         const attachment = new AttachmentBuilder(buffer, {
           name: 'patreon.png',
