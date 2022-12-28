@@ -29,7 +29,7 @@ db.run(`
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('diffusion1')
+    .setName('legacy')
     .setDescription('Generates an image from a text prompt using Stable Diffusion 1.5')
     .addStringOption(option => option
       .setName('prompt')

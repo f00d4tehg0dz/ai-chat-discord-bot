@@ -23,11 +23,11 @@ const ChatGPT = import('../node_modules/chatgpt/build/index.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('chatgpt')
-    .setDescription('Generates a response using the unofficial OpenAI CHATGPT API.')
+    .setName('chat')
+    .setDescription('Generates a response using the unofficial OpenAI CHATGP3 API.')
     .addStringOption(option =>
       option.setName('prompt')
-      .setDescription('ask CHATGPT')),
+      .setDescription('ask CHATGP3')),
   async execute(interaction) {
     await interaction.reply("I'm thinking...");
 

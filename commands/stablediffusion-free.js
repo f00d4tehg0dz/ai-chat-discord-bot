@@ -111,7 +111,7 @@ ws.on('message', async (message) => {
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('diffusionlegacy')
+    .setName('generate')
     .setDescription('Generates an image from a text prompt using Stable Diffusion 2.0')
     .addStringOption(option => option
       .setName('prompt')
