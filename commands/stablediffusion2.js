@@ -106,9 +106,9 @@ async function startSocket(interaction, prompt) {
         attachments.push(attachment);
       }
     db.query(`
-      INSERT INTO stableDiffusionPremium (user_id, prompt, response)
-      VALUES (?, ?, ?)
-    `, [interaction.user.id, prompt, results]);
+      INSERT INTO stableDiffusionPremium (user_id, prompt)
+      VALUES (?, ?)
+    `, [interaction.user.id, prompt]);
 
     await interaction.editReply({
       content: 'You asked '+ prompt,
