@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
-const sqlite3 = require('sqlite3');
+const mysql = require('mysql2');
 const dotenv = require('dotenv');
 const createHash = require('hash-generator');
 
@@ -16,17 +16,24 @@ function generateHash() {
   }
 }
 
-const db = new sqlite3.Database('conversation.db');
+const db = mysql.createPool({
+  host: process.env.sqlHost,
+  user: process.env.sqlUser,
+  password: process.env.sqlPW,
+  database: process.env.sqlDatabase,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
 
-db.run(`
+db.query(`
   CREATE TABLE IF NOT EXISTS stableDiffusion (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
     user_id TEXT,
     prompt TEXT,
     response TEXT
   )
 `);
-
 
 async function startSocket(interaction, prompt) {
   let timerCounter = setTimeout(async () => {
@@ -59,7 +66,7 @@ ws.on('message', async (message) => {
     try {
       const results = msg.output.data[0];
       const attachments = [];
-
+      const resultsToString = [results].toString();
       for (let i = 0; i < results.length; i++) {
         const data = results[i].split(',')[1];
         const buffer = Buffer.from(data, 'base64');
@@ -68,16 +75,13 @@ ws.on('message', async (message) => {
         });
         attachments.push(attachment);
       }
-
-      db.run(`
-        INSERT INTO stableDiffusion (user_id, prompt, response)
-        VALUES (?, ?, ?)
-      `, [interaction.user.id, prompt, results]);
-
-      await interaction.editReply({
+      db.query(`INSERT INTO stableDiffusion (user_id, prompt, response) VALUES (?, ?, ?)`, [interaction.user.id, prompt, resultsToString], function (error, results, fields) {
+        if (error) throw error;
+        interaction.editReply({
         content: 'You asked '+ prompt,
         files: attachments,
       });
+    });
     } catch (error) {
           console.error(error);
           await interaction.editReply({
@@ -107,6 +111,8 @@ ws.on('message', async (message) => {
         content: 'An error occurred while generating the image',
       });
     });
+    // Close the database
+
   }
 
 module.exports = {

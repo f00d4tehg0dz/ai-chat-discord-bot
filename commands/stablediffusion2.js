@@ -1,16 +1,24 @@
 const request = require('request');
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
-const sqlite3 = require('sqlite3');
 const dotenv = require('dotenv');
 dotenv.config();
 
-// Connect to the database
-const db = new sqlite3.Database('conversation.db');
+const mysql = require('mysql2');
+
+const db = mysql.createPool({
+  host: process.env.sqlHost,
+  user: process.env.sqlUser,
+  password: process.env.sqlPW,
+  database: process.env.sqlDatabase,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
 
 // Create the stableDiffusionPremium table if it doesn't already exist
-db.run(`
+db.query(`
   CREATE TABLE IF NOT EXISTS stableDiffusionPremium (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTO_INCREMENT,
     user_id TEXT,
     prompt TEXT,
     response TEXT
@@ -73,25 +81,22 @@ async function startSocket(interaction, prompt) {
       "s_noise": 1,
       "override_settings": {},
       "sampler_index": "Euler",
-      "include_init_images": false
+      "include_init_images": false,
     },
     json: true
   };
 
-  // Make the request to the Stable Diffusion API
   request(options, async function (error, response, body) {
-    if (error) throw new Error(error);
-
-    // Clear the timeout
-    clearTimeout(timerCounter)
-
     try {
+      if (error) throw new Error(error);
 
+      // Clear the timeout
+      clearTimeout(timerCounter)
       // Get the results from the API response
       const results = body.images;
       // console.log(results)
       const attachments = [];
-
+      // const resultsToString = [results].toString();
       for (let i = 0; i < results.length; i++) {
         const data = results[i];
         const buffer = Buffer.from(data, 'base64');
@@ -100,28 +105,34 @@ async function startSocket(interaction, prompt) {
         });
         attachments.push(attachment);
       }
-
-      // Insert the prompt and response into the database
-      db.run(`
+    db.query(`
       INSERT INTO stableDiffusionPremium (user_id, prompt, response)
-      VALUES ( ?, ?, ?)
+      VALUES (?, ?, ?)
     `, [interaction.user.id, prompt, results]);
 
-      // Edit the reply with the generated image
-      await interaction.editReply({
-        content: 'You asked ' + prompt,
-        files: attachments,
+    await interaction.editReply({
+      content: 'You asked '+ prompt,
+      files: attachments,
+    });
+      // // Insert the prompt and response into the database
+      // db.query(`INSERT INTO stableDiffusionPremium (user_id, prompt) VALUES (?, ?)`, [interaction.user.id, prompt], function (error, results, fields) {
+      //   if (error) throw error;
+      // // Edit the reply with the image(s) from the API response
+      //  interaction.editReply({
+      //   content: `You asked ${prompt}`,
+      //   attachments: attachments,
+      // });
+    // })
+   } catch (error) {
+      console.log(error)
+      // Edit the reply with an error message if there is a problem
+       interaction.editReply({
+        content: 'There was an error with your request. Please try again',
       });
-    } catch (error) {
-      console.error(error);
-      // If there is an error, edit the reply with an error message
-      await interaction.editReply({
-        content: 'An error occurred while generating the image',
-      });
-
-      }
+    }
   });
 }
+
 
 module.exports = {
   // Set the data for the slash command
@@ -135,15 +146,15 @@ module.exports = {
   // Function to execute the slash command
   async execute(interaction) {
     // Get the user's premium role from the database
-    db.get('SELECT premiumRole FROM users WHERE user_id = ?', [interaction.user.id], async (err, row) => {
-      if (err) {
-        console.error(err);
+    db.query('SELECT premiumRole FROM users WHERE user_id = ?', [interaction.user.id], async (error, rows) => {
+      if (error) {
+        console.error(error);
         return interaction.reply('There was an error fetching your premium role from the database.');
       }
 
       let premiumRole;
-      if (row) {
-        premiumRole = row.premiumRole;
+      if (rows && rows.length > 0) {
+        premiumRole = rows[0].premiumRole;
       } else {
         premiumRole = 'Supporter';
       }
@@ -155,18 +166,18 @@ module.exports = {
           console.log('What to generate?', prompt);
           try {
             // Send a message to indicate that the image is being generated
-            interaction.reply("I'm generating...");
+            interaction.deferReply("I'm generating...");
             // Start the socket connection and make the request to the Stable Diffusion API
              startSocket(interaction, prompt)
           } catch (error) {
             console.error(error);
+
           }
-      } else {
-      // The member does not have the "Premium Command Access" role, so they cannot use the premium command
-       await interaction.reply('Sorry, this command is only available to our Patreon supporters. Consider becoming a patron to access premium content and support the development of our bot. You can learn more about Patreon and our tiers at '+process.env.Patreon);
-      // Close the database
-      db.close();
-      }
+        } else {
+          // The member does not have the "Premium Command Access" role, so they cannot use the premium command
+          await interaction.reply('Sorry, this command is only available to our Patreon supporters. Consider becoming a patron to access premium content and support the development of our bot. You can learn more about Patreon and our tiers at '+process.env.Patreon);
+
+          }
     });
   },
 };

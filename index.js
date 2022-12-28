@@ -3,15 +3,25 @@ const { Client, Collection, Partials, GatewayIntentBits, AttachmentBuilder } = r
 
 const fs = require('node:fs');
 const path = require('node:path');
-const sqlite3 = require('sqlite3');
+const mysql = require('mysql2');
 
-const db = new sqlite3.Database('conversation.db');
-// Create the user table
-db.run(`CREATE TABLE IF NOT EXISTS users (
-	id INTEGER PRIMARY KEY,
+const db = mysql.createPool({
+  host: process.env.sqlHost,
+  user: process.env.sqlUser,
+  password: process.env.sqlPW,
+  database: process.env.sqlDatabase,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
+db.query(`CREATE TABLE IF NOT EXISTS users (
+	id INTEGER PRIMARY KEY ,
 	user_id TEXT,
 	premiumRole TEXT
-  )`);
+  )`, function (error, results, fields) {
+	if (error) throw error;
+  });
 
 // Create a new client instance
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildIntegrations, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessageTyping,GatewayIntentBits.DirectMessages],partials: [Partials.Channel] });
@@ -31,7 +41,6 @@ for (const file of commandFiles) {
 		console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
 	}
 }
-
 client.on('guildMemberAdd', member => {
 	// Check if the member has a premium role
 	const premiumRoles = ['1057368499791593542', '1057368369906585621', '1057368491239428249'];
@@ -42,7 +51,13 @@ client.on('guildMemberAdd', member => {
 	  // For example:
 	  const premiumMemberRole = member.guild.roles.cache.find(role => role.name === premiumRole);
 	  member.roles.add(premiumMemberRole);
-	  db.run(`INSERT OR REPLACE INTO users (id, user_id, premiumRole) VALUES (?, ?, ?)`, [member.user.id, member.user.id, premiumMemberRole]);
+	  db.query(`
+		INSERT INTO users (id, user_id, premiumRole)
+		VALUES (?, ?, ?)
+		ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), premiumRole = VALUES(premiumRole)
+	  `, [member.user.id, member.user.id, premiumMemberRole], function (error, results, fields) {
+		if (error) throw error;
+	  });
 	}
   });
 
@@ -56,7 +71,13 @@ client.on('guildMemberAdd', member => {
 	  // For example:
 	  const premiumMemberRole = member.guild.roles.cache.find(role => role.name === premiumRole);
 	  member.roles.remove(premiumMemberRole);
-	  db.run(`INSERT OR REPLACE users (id, user_id, premiumRole) VALUES (?, ?, ?)`, [member.user.id, member.user.id, premiumRole]);
+	  db.query(`
+		INSERT INTO users (id, user_id, premiumRole)
+		VALUES (?, ?, ?)
+		ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), premiumRole = VALUES(premiumRole)
+	  `, [member.user.id, member.user.id, premiumRole], function (error, results, fields) {
+		if (error) throw error;
+	  });
 	}
   });
 
