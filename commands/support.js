@@ -9,7 +9,7 @@ module.exports = {
   async execute(interaction) {
     const embed = new EmbedBuilder()
       .setColor(process.env.embedColor)
-      .setTitle(`AIChat Bot Support Invite`)
+      .setTitle(`Arti Bot Support Invite`)
       .setDescription(`[Ask a question here](https://discord.gg/r9dpssx3Dg)`)
       .setImage('https://i.imgur.com/fTo02Y5.png')
     interaction.reply({embeds: [embed]});

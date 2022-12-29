@@ -43,7 +43,7 @@ module.exports = {
         tokenCounter += 1; // Increment the token counter for the prompt
 
         // Check if the token counter has reached the maximum number of tokens
-        if (tokenCounter >= 100) {
+        if (tokenCounter >= 200) {
           interaction.reply("You've reached the maximum number of tokens. The conversation has ended.");
           return; // Stop the function
         }
@@ -53,7 +53,7 @@ module.exports = {
             model: "text-davinci-003",
             prompt: prompt,
             temperature: 0,
-            max_tokens: 100,
+            max_tokens: 200,
             top_p: 1,
             frequency_penalty: 0.2,
             presence_penalty: 0,
