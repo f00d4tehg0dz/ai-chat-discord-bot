@@ -16,7 +16,7 @@ const db = mysql.createPool({
 
 db.query(`
   CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY ,
+    id VARCHAR PRIMARY KEY ,
     user_id TEXT,
     premiumRole TEXT
   )
