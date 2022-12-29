@@ -16,7 +16,7 @@ const db = mysql.createPool({
 
 db.query(`
   CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    id INTEGER PRIMARY KEY ,
     user_id TEXT,
     premiumRole TEXT
   )
@@ -27,6 +27,11 @@ module.exports = {
     .setName('register')
     .setDescription('Register your server with the bot for access to Patreon Only content'),
   async execute(interaction) {
+    if (interaction.user.id !== '121258331636498432') {
+      interaction.reply("Do not run this command! It will go away in the future");
+      return;
+    }
+
     await interaction.deferReply("Registering...");
 
     // Get all the members of the server (guild)
@@ -39,7 +44,7 @@ module.exports = {
         const premiumRole = member.roles.cache.find(role => [process.env.patreonPremiumRole1, process.env.patreonPremiumRole2, process.env.patreonPremiumRole3].includes(role.name))?.name;
 
         // Insert or update the member's record in the database
-        db.query(`INSERT INTO users (user_id, premiumRole) VALUES (?, ?) ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), premiumRole = VALUES(premiumRole)`, [member.id, premiumRole], function (error, results, fields) {
+        db.query(`INSERT INTO users (id, user_id, premiumRole) VALUES (?,?,?) ON DUPLICATE KEY UPDATE user_id = VALUES(user_id), premiumRole = VALUES(premiumRole)`, [member.id, member.id, premiumRole], function (error, results, fields) {
         if (error) {
           interaction.editReply("Error, please make sure permissions and roles are set correctly before trying again");
           return console.error(error.message);
