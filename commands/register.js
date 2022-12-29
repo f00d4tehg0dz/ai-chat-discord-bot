@@ -14,13 +14,13 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
-db.query(`
-  CREATE TABLE IF NOT EXISTS users (
-    id VARCHAR PRIMARY KEY ,
-    user_id TEXT,
-    premiumRole TEXT
-  )
-`);
+// db.query(`
+//   CREATE TABLE IF NOT EXISTS users (
+//     id VARCHAR PRIMARY KEY ,
+//     user_id TEXT,
+//     premiumRole TEXT
+//   )
+// `);
 
 module.exports = {
   data: new SlashCommandBuilder()
