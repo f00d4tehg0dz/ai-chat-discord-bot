@@ -9,7 +9,8 @@ module.exports = {
   async execute(interaction) {
         interaction.reply("Invite us! /invite");
         interaction.reply("To chat with AI and have a conversation /chat");
-        interaction.reply("Generate AI made images for free use /generate");
+        interaction.reply("Generate AI made images for free /generate");
+        interaction.reply("Generate AI made images by a dropdown selected artist for free /artist");
         // interaction.reply("Generate Google AI made images for free /dalle");
         interaction.reply("Generate Advanced AI made images with patreon subscription /patreon");
         interaction.reply("Generate Legacy AI made images for free /legacy");
