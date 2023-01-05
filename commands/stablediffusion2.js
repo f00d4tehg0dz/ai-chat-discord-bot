@@ -42,57 +42,77 @@ async function startSocket(interaction, prompt) {
       'Content-Type': 'application/json'
     },
     body: {
-      "init_images": [
-        "1"
-      ],
-      "resize_mode": 0,
-      "denoising_strength": 0.75,
-      "mask": false,
-      "mask_blur": 4,
-      "inpainting_fill": 0,
-      "inpaint_full_res": true,
-      "inpaint_full_res_padding": 0,
-      "inpainting_mask_invert": 0,
-      "initial_noise_multiplier": 0,
+      // "init_images": [
+      //   "1"
+      // ],
+      // "resize_mode": 0,
+      // "denoising_strength": 0.75,
+      // "mask": false,
+      // "mask_blur": 4,
+      // "inpainting_fill": 0,
+      // "inpaint_full_res": true,
+      // "inpaint_full_res_padding": 0,
+      // "inpainting_mask_invert": 0,
+      // "initial_noise_multiplier": 0,
       "name": prompt,
       "prompt": prompt,
-      "styles": [
-        "None"
-      ],
-      "seed": -1,
-      "subseed": -1,
-      "subseed_strength": 0,
+      // "styles": [
+      //   "None"
+      // ],
+      // "seed": -1,
+      // "subseed": -1,
+      // "subseed_strength": 0,
       "seed_resize_from_h": -1,
       "seed_resize_from_w": -1,
       "sampler_name": "Euler",
       "batch_size": 1,
       "n_iter": 4,
-      "steps": 50,
+      "steps": 20,
       "cfg_scale": 7,
       "width": 768,
       "height": 768,
-      "restore_faces": false,
-      "tiling": false,
-      "negative_prompt": false,
-      "eta": 0,
-      "s_churn": 0,
-      "s_tmax": 0,
-      "s_tmin": 0,
-      "s_noise": 1,
-      "override_settings": {},
-      "sampler_index": "Euler",
-      "include_init_images": false,
+      // "restore_faces": false,
+      // "tiling": false,
+      // "negative_prompt": false,
+      // "eta": 0,
+      // "s_churn": 0,
+      // "s_tmax": 0,
+      // "s_tmin": 0,
+      // "s_noise": 1,
+      // "override_settings": {},
+      // "sampler_index": "Euler",
+      // "include_init_images": false,
     },
     json: true
   };
 
   request(options, async function (error, response, body) {
+    // try{
+    //   console.log(response)
+    //   if (response === '200') {
+    //     interaction.editReply({
+    //       content: `Average Duration ${avgDuration}`,
+    //     });
+    //   }
+    //   else {
+
+    //   }
+    // }
+    //  catch (error) {
+    //   console.log(error)
+    //   // Edit the reply with an error message if there is a problem
+    //    interaction.editReply({
+    //     content: 'There was an error with your request. Please try again',
+    //   });
+    // }
     try {
       if (error) throw new Error(error);
-
+      console.log(response)
       // Clear the timeout
       clearTimeout(timerCounter)
       // Get the results from the API response
+      const duration = response.duration;
+      const avgDuration = response.average_duration;
       const results = body.images;
       // console.log(results)
       const attachments = [];
@@ -111,18 +131,10 @@ async function startSocket(interaction, prompt) {
     `, [interaction.user.id, prompt]);
 
     await interaction.editReply({
-      content: 'You asked '+ prompt,
+      //content: `I take on average ${avgDuration} seconds. To generate ${prompt} I took ${duration}`,
+      content: `You asked me for ${prompt}`,
       files: attachments,
     });
-      // // Insert the prompt and response into the database
-      // db.query(`INSERT INTO stableDiffusionPremium (user_id, prompt) VALUES (?, ?)`, [interaction.user.id, prompt], function (error, results, fields) {
-      //   if (error) throw error;
-      // // Edit the reply with the image(s) from the API response
-      //  interaction.editReply({
-      //   content: `You asked ${prompt}`,
-      //   attachments: attachments,
-      // });
-    // })
    } catch (error) {
       console.log(error)
       // Edit the reply with an error message if there is a problem

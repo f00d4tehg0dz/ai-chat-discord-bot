@@ -53,7 +53,7 @@ module.exports = {
             model: "text-davinci-003",
             prompt: prompt,
             temperature: 0,
-            max_tokens: 200,
+            max_tokens: 500,
             top_p: 1,
             frequency_penalty: 0.2,
             presence_penalty: 0,
@@ -79,7 +79,7 @@ module.exports = {
           }
 
           // Prompt the user for their next input
-           prompt = await interaction.followUp(`${completion.data.choices[0].text.substring(1)}What's your next question or statement?`);
+           prompt = await interaction.followUp(`${completion.data.choices[0].text.substring(1)}. What's your next question or statement?`);
 
           // Check if the user wants to end the conversation
           if (prompt === "end conversation") {

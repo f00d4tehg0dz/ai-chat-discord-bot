@@ -1,6 +1,8 @@
 require('dotenv-flow').config();
 const { Client, Collection, Partials, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
-
+const cron = require("node-cron");
+const { updateMembers } = require('./registrationCron');
+const { updateCount } = require('./updateCount');
 const fs = require('node:fs');
 const path = require('node:path');
 const mysql = require('mysql2');
@@ -93,5 +95,18 @@ for (const file of eventFiles) {
 		client.on(event.name, (...args) => event.execute(...args));
 	}
 }
+
+// cron.schedule("*/15 * * * * *", function () {
+// 	console.log("---------------------");
+// 	console.log("running a task every 15 seconds");
+// 	updateMembers();
+//   });
+
+//   cron.schedule("0 0 * * *", function () {
+// 	console.log("---------------------");
+// 	console.log("grabbing latest number of servers installed on and user totals");
+// 	updateCount();
+//   });
+
 // Log in to Discord with your client's token
 client.login(process.env.DISCORD_TOKEN);
