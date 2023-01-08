@@ -26,7 +26,7 @@ db.query(`CREATE TABLE IF NOT EXISTS users (
   });
 
 // Create a new client instance
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildIntegrations, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessageTyping,GatewayIntentBits.DirectMessages],partials: [Partials.Channel] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildIntegrations, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.DirectMessageTyping,GatewayIntentBits.DirectMessages, GatewayIntentBits.GuildMessageReactions],partials: [Partials.Channel, Partials.Reaction] });
 
 client.commands = new Collection();
 
@@ -96,17 +96,17 @@ for (const file of eventFiles) {
 	}
 }
 
-// cron.schedule("*/15 * * * * *", function () {
-// 	console.log("---------------------");
-// 	console.log("running a task every 15 seconds");
-// 	updateMembers();
-//   });
+cron.schedule("*/15 * * * * *", function () {
+	console.log("---------------------");
+	console.log("running a task every 15 seconds");
+	updateMembers();
+  });
 
-//   cron.schedule("0 0 * * *", function () {
-// 	console.log("---------------------");
-// 	console.log("grabbing latest number of servers installed on and user totals");
-// 	updateCount();
-//   });
+  cron.schedule("0 0 * * *", function () {
+	console.log("---------------------");
+	console.log("grabbing latest number of servers installed on and user totals");
+	updateCount();
+  });
 
 // Log in to Discord with your client's token
 client.login(process.env.DISCORD_TOKEN);

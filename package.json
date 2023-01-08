@@ -35,6 +35,8 @@
     "got": "^12.5.3",
     "hash-generator": "^0.1.0",
     "https": "^1.0.0",
+    "image-data-uri": "^2.0.1",
+    "image-to-base64": "^2.2.0",
     "lodash": "^4.17.21",
     "ms": "^2.1.3",
     "mysql2": "^2.3.3",
