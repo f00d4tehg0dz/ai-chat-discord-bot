@@ -18,19 +18,21 @@ db.query(`
   CREATE TABLE IF NOT EXISTS servers (
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
     server TEXT,
-    player_count TEXT
+    player_count TEXT,
+    timestamp TEXT
   )
 `);
 
 // This function will be used to store data in the MySQL database
 function storeData(server, playerCount) {
+  let timestamp = new Date().toISOString();
   // Insert data into the table
   db.query(
-    'INSERT INTO servers (server, player_count) VALUES (?, ?)',
-    [server, playerCount],
+    'INSERT INTO servers (server, player_count, timestamp) VALUES (?, ?, ?)',
+    [server, playerCount, timestamp],
     (error, results) => {
       if (error) throw error;
-      console.log(`Successfully stored data for server ${server} @ ${playerCount}`);
+      console.log(`Successfully stored data for server ${server} @ ${playerCount} @ ${timestamp}`);
     }
   );
 }
@@ -49,15 +51,15 @@ async function updateCount() {
 
 }
 
-// Run the function for 10 seconds
-const timeoutId = setTimeout(updateCount, 10000);
+// Run the function for 20 seconds
+const timeoutId = setTimeout(updateCount, 20000);
 // Start the code
 client.once('ready', () => {
 
-  // Stop the function from running after 3 seconds
+  // Stop the function from running after 25 seconds
   setTimeout(() => {
     clearTimeout(timeoutId);
-  }, 3000);
+  }, 25000);
   console.log('Ready!');
 
 });

@@ -49,6 +49,9 @@ const hash = generateHash();
 ws.on('open', () => {});
 
 ws.on('message', async (message) => {
+  try {
+
+
   const msg = JSON.parse(`${message}`);
   if (msg.msg === 'send_hash') {
     ws.send(JSON.stringify(hash));
@@ -111,8 +114,14 @@ ws.on('message', async (message) => {
           });
       }
       }
-    });
 
+    } catch (error) {
+      console.error(error);
+      await interaction.editReply({
+        content: 'An error occurred while generating the image',
+      });
+    };
+  });
     ws.on('error', async (error) => {
       console.error(error);
       await interaction.editReply({

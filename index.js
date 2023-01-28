@@ -96,9 +96,9 @@ for (const file of eventFiles) {
 	}
 }
 
-cron.schedule("*/15 * * * * *", function () {
+cron.schedule("*/60 * * * * *", function () {
 	console.log("---------------------");
-	console.log("running a task every 15 seconds");
+	console.log("running a task every 45 seconds");
 	updateMembers();
   });
 
