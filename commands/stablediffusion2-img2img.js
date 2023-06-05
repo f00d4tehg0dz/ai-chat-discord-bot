@@ -1,13 +1,29 @@
 const request = require('request');
 const imageDataUri = require("image-data-uri")
+const WebSocket = require('ws');
+const axios = require('axios');
 const {
   SlashCommandBuilder,
   AttachmentBuilder
 } = require('discord.js');
 const dotenv = require('dotenv');
 dotenv.config();
+const createHash = require('hash-generator');
 
 let imageURI;
+
+
+//Generate hash solution idea from https://github.com/onury5506/Discord-ChatGPT-Bot
+
+function generateHash() {
+  let hash = createHash(11)
+  return {
+    event_data: null,
+    fn_index: 172,
+    session_hash: hash
+
+  }
+}
 
 const mysql = require('mysql2');
 
@@ -31,17 +47,23 @@ db.query(`
   )
 `);
 
-
-
-
-// Function to start the socket connection and make the request to the Stable Diffusion API
 async function startSocket(interaction, prompt, attachmentURL) {
-  // Set a timeout for the request
   let timerCounter = setTimeout(async () => {
     await interaction.editReply({
       content: 'Your request has timed out. Please try again',
     });
   }, 129000)
+  const ws = new WebSocket('ws://f00d4tehg0dz.me:13000/queue/join');
+  const hash = generateHash();
+
+
+
+  ws.on('open', () => { });
+
+  ws.on('message', async (message) => {
+    const msg = JSON.parse(`${message}`);
+    console.log(msg)
+     // Sometimes the WS send doesn't get a receive, so we time it out and retry
   const getImageURIArr = () => {
     return imageDataUri.encodeFromURL(attachmentURL)
       .then(res => {
@@ -52,73 +74,79 @@ async function startSocket(interaction, prompt, attachmentURL) {
         console.error(error);
       });
   };
+
   await getImageURIArr()
 
-  const options = {
-    method: 'POST',
-    url: process.env.stableDiffusionImg2ImgEnv,
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: {
-      "init_images": [
-        imageURI
-      ],
-      "name": prompt,
-      "prompt": prompt,
-      "seed_resize_from_h": -1,
-      "seed_resize_from_w": -1,
-      "sampler_name": "Euler",
-      "batch_size": 1,
-      "n_iter": 4,
-      "steps": 20,
-      "cfg_scale": 7,
-      "width": 768,
-      "height": 768,
-      "include_init_images": true
-    },
-    json: true
-  };
-
-  request(options, async function (error, response, body) {
-    try {
-      if (error) throw new Error(error);
-      // console.log(response)
-      // Clear the timeout
-      clearTimeout(timerCounter)
-      // Get the results from the API response
-      const results = body.images;
-      // console.log(results)
-      const attachments = [];
-      // const resultsToString = [results].toString();
-      for (let i = 0; i < results.length; i++) {
-        const data = results[i];
-        const buffer = Buffer.from(data, 'base64');
-        const attachment = new AttachmentBuilder(buffer, {
-          name: 'patreonImg2Img.png',
-        });
-        attachments.push(attachment);
-      }
-      db.query(`
-      INSERT INTO stableDiffusionImg2ImgPremium (user_id, prompt)
-      VALUES (?, ?)
-    `, [interaction.user.id, prompt]);
-
+    if (msg.msg === 'send_hash') {
+      ws.send(JSON.stringify(hash));
+    } else if (msg.msg === 'send_data') {
+      const data = {
+        data: ["",0,prompt,"",[],imageURI,null,null,null,null,null,null,20,"Euler a",4,0,"original",false,false,1,1,7,1.5,0.75,-1,-1,0,0,0,false,null,768,768,1,"Just resize","Whole picture",32,"Inpaint masked","","","",[],"None","<ul>\n<li><code>CFG Scale</code> should be 2 or lower.</li>\n</ul>\n",true,true,"","",true,50,true,1,0,false,4,0.5,"Linear","None","<p style=\"margin-bottom:0.75em\">Recommended settings: Sampling Steps: 80-100, Sampler: Euler a, Denoising strength: 0.8</p>",128,8,["left","right","up","down"],1,0.05,128,4,"fill",["left","right","up","down"],false,false,"positive","comma",0,false,false,"","<p style=\"margin-bottom:0.75em\">Will upscale the image by the selected scale factor; use width and height sliders to set tile size</p>",64,"None",2,"Seed","",[],"Nothing","",[],"Nothing","",[],true,false,false,false,0,[],"","",""],
+        ...hash,
+      };
+      ws.send(JSON.stringify(data));
+    } else if (msg.msg === 'estimation') {
       await interaction.editReply({
-        //content: `I take on average ${avgDuration} seconds. To generate ${prompt} I took ${duration}`,
-        content: `You asked me for ${prompt}`,
-        files: attachments,
+        content: 'Current Position in Queue ' + msg.rank,
       });
-    } catch (error) {
-      console.log(error)
-      // Edit the reply with an error message if there is a problem
-      interaction.editReply({
-        content: 'There was an error with your request. Please try again',
-      });
+    } else if (msg.msg === 'process_completed') {
+      clearTimeout(timerCounter)
+      try {
+        const results = msg.output.data[0]; // Assuming this is an array
+        const attachments = [];
+        for (let i = 0; i < results.length; i++) {
+          // Assuming that the name is a relative URL path for the file
+          const fileUrl = `http://f00d4tehg0dz.me:13000/file=${results[i].name}`;
+
+          const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+          const buffer = Buffer.from(response.data, 'binary');
+
+          const attachment = new AttachmentBuilder(buffer, {
+            name: 'patreonImg2Img.png',
+          });
+          attachments.push(attachment);
+        }
+
+
+        db.query(`INSERT INTO stableDiffusionImg2ImgPremium (user_id, prompt) VALUES (?, ?)`, [interaction.user.id, prompt], function (error, results, fields) {
+          if (error) throw error;
+          interaction.editReply({
+            content: 'You asked ' + prompt,
+            files: attachments,
+          });
+        });
+      } catch (error) {
+        console.error(error);
+        await interaction.editReply({
+          content: 'An error occurred while generating the image',
+        });
+      }
+    } else if (msg.msg === 'queue_full') {
+      try {
+        await interaction.editReply({
+          content: 'The queue is full. Please try entering your prompt of ' + prompt + ' again',
+        });
+        // Infinite loop detected
+        // startSocket(interaction, prompt)
+      }
+      catch (error) {
+        console.error(error);
+        await interaction.editReply({
+          content: 'An error occurred while generating the image',
+        });
+      }
     }
   });
-}
 
+  ws.on('error', async (error) => {
+    console.error(error);
+    await interaction.editReply({
+      content: 'An error occurred while generating the image',
+    });
+  });
+  // Close the database
+
+}
 
 module.exports = {
   // Set the data for the slash command

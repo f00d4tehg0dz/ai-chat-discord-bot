@@ -2,10 +2,6 @@ const request = require('request');
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const WebSocket = require('ws');
 const axios = require('axios');
-import('node-fetch').then(nodeFetch => {
-  fetch = nodeFetch;
-  // You can now use fetch in this scope
-});
 const mysql = require('mysql2');
 const dotenv = require('dotenv');
 
@@ -96,7 +92,7 @@ async function startSocket(interaction, prompt) {
         }
 
 
-        db.query(`INSERT INTO stablediffusionpremium (user_id, prompt) VALUES (?, ?)`, [interaction.user.id, prompt], function (error, results, fields) {
+        db.query(`INSERT INTO stableDiffusionPremium (user_id, prompt) VALUES (?, ?)`, [interaction.user.id, prompt], function (error, results, fields) {
           if (error) throw error;
           interaction.editReply({
             content: 'You asked ' + prompt,
