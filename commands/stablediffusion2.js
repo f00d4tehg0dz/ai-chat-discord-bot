@@ -1,9 +1,16 @@
 const request = require('request');
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
-const dotenv = require('dotenv');
-dotenv.config();
-
+const WebSocket = require('ws');
+const axios = require('axios');
+import('node-fetch').then(nodeFetch => {
+  fetch = nodeFetch;
+  // You can now use fetch in this scope
+});
 const mysql = require('mysql2');
+const dotenv = require('dotenv');
+
+const createHash = require('hash-generator');
+dotenv.config();
 
 const db = mysql.createPool({
   host: process.env.sqlHost,
@@ -15,6 +22,18 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
+//Generate hash solution idea from https://github.com/onury5506/Discord-ChatGPT-Bot
+
+function generateHash() {
+  let hash = createHash(11)
+  return {
+    event_data: null,
+    fn_index: 86,
+    session_hash: hash
+
+  }
+}
+
 // Create the stableDiffusionPremium table if it doesn't already exist
 db.query(`
   CREATE TABLE IF NOT EXISTS stableDiffusionPremium (
@@ -25,126 +44,97 @@ db.query(`
   )
 `);
 
-// Function to start the socket connection and make the request to the Stable Diffusion API
+
+
+dotenv.config();
+
 async function startSocket(interaction, prompt) {
-  // Set a timeout for the request
   let timerCounter = setTimeout(async () => {
     await interaction.editReply({
       content: 'Your request has timed out. Please try again',
     });
   }, 129000)
+  const ws = new WebSocket('ws://f00d4tehg0dz.me:13000/queue/join');
+  const hash = generateHash();
+  // Sometimes the WS send doesn't get a receive, so we time it out and retry
 
-  // Set the options for the request to the Stable Diffusion API
-  const options = {
-    method: 'POST',
-    url: process.env.stableDiffusionEnv,
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: {
-      // "init_images": [
-      //   "1"
-      // ],
-      // "resize_mode": 0,
-      // "denoising_strength": 0.75,
-      // "mask": false,
-      // "mask_blur": 4,
-      // "inpainting_fill": 0,
-      // "inpaint_full_res": true,
-      // "inpaint_full_res_padding": 0,
-      // "inpainting_mask_invert": 0,
-      // "initial_noise_multiplier": 0,
-      "name": prompt,
-      "prompt": prompt,
-      // "styles": [
-      //   "None"
-      // ],
-      // "seed": -1,
-      // "subseed": -1,
-      // "subseed_strength": 0,
-      "seed_resize_from_h": -1,
-      "seed_resize_from_w": -1,
-      "sampler_name": "Euler",
-      "batch_size": 1,
-      "n_iter": 4,
-      "steps": 20,
-      "cfg_scale": 7,
-      "width": 768,
-      "height": 768,
-      // "restore_faces": false,
-      // "tiling": false,
-      // "negative_prompt": false,
-      // "eta": 0,
-      // "s_churn": 0,
-      // "s_tmax": 0,
-      // "s_tmin": 0,
-      // "s_noise": 1,
-      // "override_settings": {},
-      // "sampler_index": "Euler",
-      // "include_init_images": false,
-    },
-    json: true
-  };
+  ws.on('open', () => { });
 
-  request(options, async function (error, response, body) {
-    // try{
-    //   console.log(response)
-    //   if (response === '200') {
-    //     interaction.editReply({
-    //       content: `Average Duration ${avgDuration}`,
-    //     });
-    //   }
-    //   else {
-
-    //   }
-    // }
-    //  catch (error) {
-    //   console.log(error)
-    //   // Edit the reply with an error message if there is a problem
-    //    interaction.editReply({
-    //     content: 'There was an error with your request. Please try again',
-    //   });
-    // }
-    try {
-      if (error) throw new Error(error);
-      console.log(response)
-      // Clear the timeout
-      clearTimeout(timerCounter)
-      // Get the results from the API response
-      const duration = response.duration;
-      const avgDuration = response.average_duration;
-      const results = body.images;
-      // console.log(results)
-      const attachments = [];
-      // const resultsToString = [results].toString();
-      for (let i = 0; i < results.length; i++) {
-        const data = results[i];
-        const buffer = Buffer.from(data, 'base64');
-        const attachment = new AttachmentBuilder(buffer, {
-          name: 'patreon.png',
-        });
-        attachments.push(attachment);
-      }
-    db.query(`
-      INSERT INTO stableDiffusionPremium (user_id, prompt)
-      VALUES (?, ?)
-    `, [interaction.user.id, prompt]);
-
-    await interaction.editReply({
-      //content: `I take on average ${avgDuration} seconds. To generate ${prompt} I took ${duration}`,
-      content: `You asked me for ${prompt}`,
-      files: attachments,
-    });
-   } catch (error) {
-      console.log(error)
-      // Edit the reply with an error message if there is a problem
-       interaction.editReply({
-        content: 'There was an error with your request. Please try again',
+  ws.on('message', async (message) => {
+    const msg = JSON.parse(`${message}`);
+    if (msg.msg === 'send_hash') {
+      ws.send(JSON.stringify(hash));
+    } else if (msg.msg === 'send_data') {
+      const data = {
+        data: ["", prompt, "", [], 20, "Euler a", false, false, 1, 1, 7, -1, -1, 0, 0, 0, false, 768, 768, false, 0.7, 2, "Latent", 0, 0, 0, "Use same sampler", "", "", [], "None", false, false, "positive", "comma", 0, false, false, "", "Seed", "", [], "Nothing", "", [], "Nothing", "", [], true, false, false, false, 0, [], "", "", ""],
+        ...hash,
+      };
+      ws.send(JSON.stringify(data));
+    } else if (msg.msg === 'estimation') {
+      await interaction.editReply({
+        content: 'Current Position in Queue ' + msg.rank,
       });
+    } else if (msg.msg === 'process_completed') {
+      clearTimeout(timerCounter)
+
+      try {
+
+        const results = msg.output.data[0]; // Assuming this is an array
+        const attachments = [];
+
+        for (let i = 0; i < results.length; i++) {
+          // Assuming that the name is a relative URL path for the file
+          const fileUrl = `http://f00d4tehg0dz.me:13000/file=${results[i].name}`;
+
+          const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+          const buffer = Buffer.from(response.data, 'binary');
+
+          const attachment = new AttachmentBuilder(buffer, {
+            name: 'diffusion.png',
+          });
+          attachments.push(attachment);
+        }
+
+
+        db.query(`INSERT INTO stablediffusionpremium (user_id, prompt) VALUES (?, ?)`, [interaction.user.id, prompt], function (error, results, fields) {
+          if (error) throw error;
+          interaction.editReply({
+            content: 'You asked ' + prompt,
+            files: attachments,
+          });
+        });
+      } catch (error) {
+        console.error(error);
+        await interaction.editReply({
+          content: 'An error occurred while generating the image',
+        });
+      }
+    } else if (msg.msg === 'queue_full') {
+      try {
+        await interaction.editReply({
+          content: 'The queue is full. Please try entering your prompt of ' + prompt + ' again',
+        });
+        // Infinite loop detected
+        // startSocket(interaction, prompt)
+      }
+      catch (error) {
+        console.error(error);
+        await interaction.editReply({
+          content: 'An error occurred while generating the image',
+        });
+      }
     }
   });
-}
 
+  ws.on('error', async (error) => {
+    console.error(error);
+    await interaction.editReply({
+      content: 'An error occurred while generating the image',
+    });
+  });
+  // Close the database
+
+}
 
 module.exports = {
   // Set the data for the slash command
@@ -175,21 +165,21 @@ module.exports = {
       if (premiumRole === 'Member' || premiumRole === 'Super Supporter') {
         // Get the prompt from the command options
         const prompt = interaction.options.getString('prompt');
-          console.log('What to generate?', prompt);
-          try {
-            // Send a message to indicate that the image is being generated
-            interaction.deferReply("I'm generating...");
-            // Start the socket connection and make the request to the Stable Diffusion API
-             startSocket(interaction, prompt)
-          } catch (error) {
-            console.error(error);
+        console.log('What to generate?', prompt);
+        try {
+          // Send a message to indicate that the image is being generated
+          await interaction.reply("I'm generating...");
+          // Start the socket connection and make the request to the Stable Diffusion API
+          startSocket(interaction, prompt)
+        } catch (error) {
+          console.error(error);
 
-          }
-        } else {
-          // The member does not have the "Premium Command Access" role, so they cannot use the premium command
-          await interaction.reply('Sorry, this command is only available to our Patreon supporters. Consider becoming a patron to access premium content and support the development of our bot. You can learn more about Patreon and our tiers at '+process.env.Patreon);
+        }
+      } else {
+        // The member does not have the "Premium Command Access" role, so they cannot use the premium command
+        await interaction.reply('Sorry, this command is only available to our Patreon supporters. Consider becoming a patron to access premium content and support the development of our bot. You can learn more about Patreon and our tiers at ' + process.env.Patreon);
 
-          }
+      }
     });
   },
 };
