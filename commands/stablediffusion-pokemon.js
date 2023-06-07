@@ -32,14 +32,12 @@ db.query(`
 async function makePrediction(interaction, prompt) {
   // Set the options for the first POST request
   const data = {
-    version: "3554d9e699e09693d3fa334a79c58be9a405dd021d3e11281256d53185868912",
+    version: "ff6cc781634191dd3c49097a615d2fc01b0a8aae31c448e55039a04dcbf36bba",
     input: {
       "prompt": prompt.toString(),
       "guidance_scale": 7.5,
       "num_outputs": 1,
-      "num_inference_steps": 20,
-      "width": 768,
-      "height": 768,
+      "num_inference_steps": 50
     },
   };
   let timerCounter = setTimeout(async () => {
