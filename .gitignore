@@ -13,3 +13,4 @@ conversation.db
 
 # ignore history
 .history
+.env

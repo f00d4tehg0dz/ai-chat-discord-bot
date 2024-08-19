@@ -27,7 +27,7 @@ const db = mysql.createPool({
 });
 
 db.query(`
-  CREATE TABLE IF NOT EXISTS stableDiffusion (
+  CREATE TABLE IF NOT EXISTS stableDiffusionLegacy (
     id INTEGER PRIMARY KEY AUTO_INCREMENT,
     user_id TEXT,
     prompt TEXT,
@@ -75,7 +75,7 @@ ws.on('message', async (message) => {
         });
         attachments.push(attachment);
       }
-      db.query(`INSERT INTO stableDiffusion (user_id, prompt) VALUES (?, ?)`, [interaction.user.id, prompt], function (error, results, fields) {
+      db.query(`INSERT INTO stableDiffusionLegacy (user_id, prompt) VALUES (?, ?)`, [interaction.user.id, prompt], function (error, results, fields) {
         if (error) throw error;
         interaction.editReply({
         content: 'You asked '+ prompt,
@@ -117,7 +117,7 @@ ws.on('message', async (message) => {
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('generate')
+    .setName('legacy')
     .setDescription('Generates an image from a text prompt using Stable Diffusion 2.0')
     .addStringOption(option => option
       .setName('prompt')
